@@ -9,6 +9,7 @@ export {
 export type {
 	MaprayCameraController,
 	MaprayNavigationOptions,
+	MaprayNavigationPosition,
 	MaprayNavigationTooltips,
 	MaprayNavigationTarget,
 	MaprayViewerWithNavigation

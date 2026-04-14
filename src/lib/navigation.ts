@@ -48,39 +48,39 @@ export interface MaprayCameraController {
 	updateCamera?: () => void;
 }
 
+export type MaprayNavigationPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 export interface MaprayNavigationOptions {
+	/** Show the compass UI. */
 	enableCompass?: boolean;
+	/** Show the vertical zoom / home button stack. */
 	enableZoomControls?: boolean;
-	fallbackPivotDistance?: number;
-	maxAltitudeAboveGround?: number;
-	minAltitudeAboveGround?: number;
-	minZoomDistance?: number;
-	position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-	rotateStep?: number;
+	/** Corner where the widget is attached inside the viewer container. */
+	position?: MaprayNavigationPosition;
+	/** Override UI tooltip text. */
 	tooltips?: Partial<MaprayNavigationTooltips>;
-	zoomFactor?: number;
 }
 
 export interface MaprayNavigationTooltips {
+	/** Tooltip for the draggable compass center. */
 	compassCenter: string;
+	/** Tooltip for the draggable compass outer ring. */
 	compassRing: string;
+	/** Tooltip for the home button. */
 	home: string;
+	/** @deprecated Currently unused. Compass center click reuses `compassCenter`. */
 	resetNorth: string;
+	/** Tooltip for the zoom-in button. */
 	zoomIn: string;
+	/** Tooltip for the zoom-out button. */
 	zoomOut: string;
 }
 
 interface ResolvedMaprayNavigationOptions {
 	enableCompass: boolean;
 	enableZoomControls: boolean;
-	fallbackPivotDistance?: number;
-	maxAltitudeAboveGround: number;
-	minAltitudeAboveGround: number;
-	minZoomDistance: number;
-	position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-	rotateStep: number;
+	position: MaprayNavigationPosition;
 	tooltips: MaprayNavigationTooltips;
-	zoomFactor: number;
 }
 
 export type MaprayNavigationTarget =
@@ -118,15 +118,15 @@ const DEFAULT_TOOLTIPS: MaprayNavigationTooltips = {
 const DEFAULT_OPTIONS: ResolvedMaprayNavigationOptions = {
 	enableCompass: true,
 	enableZoomControls: true,
-	fallbackPivotDistance: undefined,
-	maxAltitudeAboveGround: Number.MAX_VALUE,
-	minAltitudeAboveGround: 30,
-	minZoomDistance: 150,
 	position: 'top-right',
-	rotateStep: 15,
-	tooltips: DEFAULT_TOOLTIPS,
-	zoomFactor: 0.65
+	tooltips: DEFAULT_TOOLTIPS
 };
+
+const DEFAULT_MAX_ALTITUDE_ABOVE_GROUND = Number.MAX_VALUE;
+const DEFAULT_MIN_ALTITUDE_ABOVE_GROUND = 30;
+const DEFAULT_MIN_ZOOM_DISTANCE = 150;
+const DEFAULT_ROTATE_STEP = 15;
+const DEFAULT_ZOOM_FACTOR = 0.65;
 
 const STYLES = `
 .mapray-navigation {
@@ -490,11 +490,11 @@ function createNavigationInstance(
 	}
 
 	function rotateLeft(): void {
-		startRotateAnimation(-resolvedOptions.rotateStep);
+		startRotateAnimation(-DEFAULT_ROTATE_STEP);
 	}
 
 	function rotateRight(): void {
-		startRotateAnimation(resolvedOptions.rotateStep);
+		startRotateAnimation(DEFAULT_ROTATE_STEP);
 	}
 
 	function setNavigationLocked(nextLocked: boolean): void {
@@ -505,11 +505,11 @@ function createNavigationInstance(
 	}
 
 	function zoomIn(): void {
-		zoomBy(resolvedOptions.zoomFactor);
+		zoomBy(DEFAULT_ZOOM_FACTOR);
 	}
 
 	function zoomOut(): void {
-		zoomBy(1 / resolvedOptions.zoomFactor);
+		zoomBy(1 / DEFAULT_ZOOM_FACTOR);
 	}
 
 	function clampPositionGocs(position: MaprayVector3): MaprayVector3 {
@@ -523,8 +523,8 @@ function createNavigationInstance(
 
 		geoPoint.altitude = clamp(
 			geoPoint.altitude,
-			elevation + resolvedOptions.minAltitudeAboveGround,
-			elevation + resolvedOptions.maxAltitudeAboveGround
+			elevation + DEFAULT_MIN_ALTITUDE_ABOVE_GROUND,
+			elevation + DEFAULT_MAX_ALTITUDE_ABOVE_GROUND
 		);
 
 		const matrix = geoPoint.getMlocsToGocsMatrix(GeoMath.createMatrix());
@@ -653,10 +653,7 @@ function createNavigationInstance(
 		const geoPoint = new GeoPoint();
 		geoPoint.setFromGocs(getCameraPositionGocs());
 
-		return (
-			resolvedOptions.fallbackPivotDistance ??
-			Math.max(resolvedOptions.minZoomDistance * 4, Math.max(geoPoint.altitude, 1000) * 0.35)
-		);
+		return Math.max(DEFAULT_MIN_ZOOM_DISTANCE * 4, Math.max(geoPoint.altitude, 1000) * 0.35);
 	}
 
 	function getPivotPoint(): MaprayVector3 {
@@ -1075,8 +1072,8 @@ function createNavigationInstance(
 		}
 
 		const clampedScale =
-			scale < 1 && distance * scale < resolvedOptions.minZoomDistance
-				? resolvedOptions.minZoomDistance / distance
+			scale < 1 && distance * scale < DEFAULT_MIN_ZOOM_DISTANCE
+				? DEFAULT_MIN_ZOOM_DISTANCE / distance
 				: scale;
 
 		GeoMath.scale3(clampedScale, offset, offset);

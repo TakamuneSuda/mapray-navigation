@@ -40,9 +40,7 @@ const viewer = new mapray.Viewer(container, {
 await viewer.init_promise;
 
 const navigation = createMaprayNavigation(viewer, {
-	position: 'top-right',
-	zoomFactor: 0.7,
-	rotateStep: 20
+	position: 'top-right'
 });
 ```
 
@@ -110,17 +108,13 @@ The returned instance exposes:
 ## Options
 
 ```ts
+type MaprayNavigationPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 type MaprayNavigationOptions = {
 	enableCompass?: boolean;
 	enableZoomControls?: boolean;
-	fallbackPivotDistance?: number;
-	maxAltitudeAboveGround?: number;
-	minAltitudeAboveGround?: number;
-	minZoomDistance?: number;
-	position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-	rotateStep?: number;
+	position?: MaprayNavigationPosition;
 	tooltips?: Partial<MaprayNavigationTooltips>;
-	zoomFactor?: number;
 };
 ```
 
@@ -134,6 +128,19 @@ type MaprayNavigationTooltips = {
 	zoomOut: string;
 };
 ```
+
+- `enableCompass`
+  Enables the compass widget.
+- `enableZoomControls`
+  Enables the vertical zoom and home button stack.
+- `position`
+  Chooses which corner of the viewer container the UI is attached to.
+- `tooltips`
+  Overrides tooltip text for the visible controls.
+
+`tooltips.resetNorth` is currently kept for backward compatibility, but the current UI does not render a dedicated reset-north button. Clicking the compass center uses `compassCenter` instead.
+
+All properties in `MaprayNavigationOptions` are optional. Calling `createMaprayNavigation(viewer)` with no second argument is valid.
 
 ## How it works
 
