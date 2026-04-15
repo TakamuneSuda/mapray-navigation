@@ -1,7 +1,7 @@
 {
 	"name": "mapray-navigation",
 	"description": "Navigation UI controls for mapray-js viewers.",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "pnpm build:demo && pnpm build:package",

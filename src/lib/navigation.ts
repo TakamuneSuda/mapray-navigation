@@ -110,9 +110,6 @@ const DEFAULT_OPTIONS: ResolvedMaprayNavigationOptions = {
 	tooltips: DEFAULT_TOOLTIPS
 };
 
-const DEFAULT_MAX_ALTITUDE_ABOVE_GROUND = Number.MAX_VALUE;
-const DEFAULT_MIN_ALTITUDE_ABOVE_GROUND = 30;
-const DEFAULT_MIN_ZOOM_DISTANCE = 150;
 const DEFAULT_ROTATE_STEP = 15;
 const DEFAULT_ZOOM_FACTOR = 0.65;
 
@@ -172,9 +169,12 @@ const STYLES = `
 .mapray-navigation__compass-ring {
   position: absolute;
   inset: 0;
+  box-sizing: border-box;
   border: 0;
   border-radius: 999px;
   background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: grab;
 }
 
@@ -251,29 +251,48 @@ const STYLES = `
 }
 
 .mapray-navigation__compass-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   top: 50%;
   left: 50%;
   width: 46px;
   height: 46px;
+  min-width: 0;
+  min-height: 0;
   padding: 0;
+  box-sizing: border-box;
   border: 0.25px solid var(--mapray-navigation-foreground);
   border-radius: 999px;
   transform: translate(-50%, -50%);
   background: var(--mapray-navigation-surface);
   color: var(--mapray-navigation-foreground);
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: 1;
 }
 
 .mapray-navigation__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   width: 36px;
   height: 36px;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
   border: 0.25px solid var(--mapray-navigation-foreground);
   border-radius: 4px;
   background: var(--mapray-navigation-surface);
   color: var(--mapray-navigation-foreground);
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
+  line-height: 1;
 }
 
 .mapray-navigation__button:hover {
@@ -491,25 +510,6 @@ function createNavigationInstance(
 		zoomBy(1 / DEFAULT_ZOOM_FACTOR);
 	}
 
-	function clampPositionGocs(position: MaprayVector3): MaprayVector3 {
-		const geoPoint = new GeoPoint();
-		geoPoint.setFromGocs(position);
-
-		const elevation = viewer.getElevation(geoPoint.latitude, geoPoint.longitude);
-		if (!Number.isFinite(elevation)) {
-			return position;
-		}
-
-		geoPoint.altitude = clamp(
-			geoPoint.altitude,
-			elevation + DEFAULT_MIN_ALTITUDE_ABOVE_GROUND,
-			elevation + DEFAULT_MAX_ALTITUDE_ABOVE_GROUND
-		);
-
-		const matrix = geoPoint.getMlocsToGocsMatrix(GeoMath.createMatrix());
-		return GeoMath.createVector3([matrix[12], matrix[13], matrix[14]]);
-	}
-
 	function createButtonWithMarkup(
 		markup: string,
 		title: string,
@@ -632,7 +632,7 @@ function createNavigationInstance(
 		const geoPoint = new GeoPoint();
 		geoPoint.setFromGocs(getCameraPositionGocs());
 
-		return Math.max(DEFAULT_MIN_ZOOM_DISTANCE * 4, Math.max(geoPoint.altitude, 1000) * 0.35);
+		return Math.max(geoPoint.altitude, 1000) * 0.35;
 	}
 
 	function getPivotPoint(): MaprayVector3 {
@@ -726,9 +726,7 @@ function createNavigationInstance(
 			upAxis,
 			deltaYaw
 		);
-		const nextPosition = clampPositionGocs(
-			GeoMath.add3(pivot, rotatedPosition, GeoMath.createVector3())
-		);
+		const nextPosition = GeoMath.add3(pivot, rotatedPosition, GeoMath.createVector3());
 
 		if (controller) {
 			setControllerCameraPositionFromGocs(nextPosition);
@@ -775,19 +773,11 @@ function createNavigationInstance(
 			const rightAxis = GeoMath.cross3(upAxis, offset, GeoMath.createVector3());
 			if (GeoMath.length3(rightAxis) > 1.0e-6) {
 				GeoMath.normalize3(rightAxis, rightAxis);
-
-				const pitchedOffset = rotateVector(offset, rightAxis, deltaPitch);
-				const pitchedDirection = GeoMath.createVector3(pitchedOffset);
-				GeoMath.normalize3(pitchedDirection, pitchedDirection);
-				const upwardDot = GeoMath.dot3(pitchedDirection, upAxis);
-
-				if (upwardDot > 0.05 && upwardDot < 0.995) {
-					offset = pitchedOffset;
-				}
+				offset = rotateVector(offset, rightAxis, deltaPitch);
 			}
 		}
 
-		const nextPosition = clampPositionGocs(GeoMath.add3(pivot, offset, GeoMath.createVector3()));
+		const nextPosition = GeoMath.add3(pivot, offset, GeoMath.createVector3());
 		lookAtPivot(nextPosition, pivot, upAxis);
 	}
 
@@ -1038,14 +1028,9 @@ function createNavigationInstance(
 			return;
 		}
 
-		const clampedScale =
-			scale < 1 && distance * scale < DEFAULT_MIN_ZOOM_DISTANCE
-				? DEFAULT_MIN_ZOOM_DISTANCE / distance
-				: scale;
+		GeoMath.scale3(scale, offset, offset);
 
-		GeoMath.scale3(clampedScale, offset, offset);
-
-		const nextPosition = clampPositionGocs(GeoMath.add3(pivot, offset, GeoMath.createVector3()));
+		const nextPosition = GeoMath.add3(pivot, offset, GeoMath.createVector3());
 		startZoomAnimation(cameraPosition, nextPosition);
 	}
 
