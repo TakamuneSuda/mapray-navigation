@@ -46,7 +46,7 @@
 	},
 	"homepage": "https://takamunesuda.github.io/mapray-navigation/",
 	"peerDependencies": {
-		"@mapray/mapray-js": "^0.9.6"
+		"@mapray/mapray-js": "0.9.5-fork.2 || ^0.9.6"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.4",
