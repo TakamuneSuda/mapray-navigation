@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '@mapray/ui/mapray.css';
 	import { onDestroy, onMount } from 'svelte';
 	import { deobfuscateToken } from './token-obfuscation.js';
 
@@ -28,14 +29,24 @@
 		destroyDebug();
 
 		try {
-			const [{ default: maprayui }, { createMaprayNavigation }] = await Promise.all([
-				import('@mapray/ui'),
-				import('../lib/index.js')
-			]);
+			const [{ default: mapray }, { default: maprayui }, { createMaprayNavigation }] =
+				await Promise.all([
+					import('@mapray/mapray-js'),
+					import('@mapray/ui'),
+					import('../lib/index.js')
+				]);
 
 			const stdViewer = new maprayui.StandardUIViewer(hostElement, maprayToken);
 
 			await stdViewer.viewer.init_promise;
+			stdViewer.viewer.logo_controller.setVisibility(true);
+			stdViewer.viewer.logo_controller.setPosition(
+				mapray.ContainerController.ContainerPosition.BOTTOM_LEFT
+			);
+			stdViewer.viewer.attribution_controller.setVisibility(true);
+			stdViewer.viewer.attribution_controller.setPosition(
+				mapray.ContainerController.ContainerPosition.BOTTOM_RIGHT
+			);
 
 			stdViewer.setCameraPosition({
 				longitude: 139.73685,
