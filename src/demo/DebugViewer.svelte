@@ -1,15 +1,11 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-
-	type PageData = {
-		maprayToken: string;
-	};
-
-	let { data }: { data: PageData } = $props();
+	import { deobfuscateToken } from './token-obfuscation.js';
 
 	let hostElement = $state<HTMLDivElement | null>(null);
-
 	let cleanup: (() => void) | null = null;
+
+	const maprayToken = deobfuscateToken(__MAPRAY_TOKEN_OBFUSCATED__);
 
 	function destroyDebug() {
 		cleanup?.();
@@ -17,8 +13,10 @@
 	}
 
 	async function createDebugViewer() {
-		if (!data.maprayToken.trim()) {
-			console.error('Missing environment variable: mapray_token');
+		if (!maprayToken.trim()) {
+			console.error(
+				'Missing mapray token. Set mapray_token or MAPRAY_TOKEN before building the demo.'
+			);
 			return;
 		}
 
@@ -32,10 +30,10 @@
 		try {
 			const [{ default: maprayui }, { createMaprayNavigation }] = await Promise.all([
 				import('@mapray/ui'),
-				import('../../lib/index.js')
+				import('../lib/index.js')
 			]);
 
-			const stdViewer = new maprayui.StandardUIViewer(hostElement, data.maprayToken);
+			const stdViewer = new maprayui.StandardUIViewer(hostElement, maprayToken);
 
 			await stdViewer.viewer.init_promise;
 
@@ -77,7 +75,7 @@
 </script>
 
 <svelte:head>
-	<title>mapray-navigation debug</title>
+	<title>mapray-navigation demo</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 	<link

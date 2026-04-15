@@ -4,7 +4,6 @@ const GeoMath = mapray.GeoMath;
 const GeoPoint = mapray.GeoPoint;
 
 const STYLE_ID = 'mapray-navigation-style';
-const CONTROLLER_PROPERTY = '__maprayNavigationController__';
 const COMPASS_CENTER_ICON = `
 <svg width="28" height="28" viewBox="0 0 16 16" aria-hidden="true">
   <path d="M14.5 8A6.5 6.5 0 0 1 8 14.5M14.5 8A6.5 6.5 0 0 0 8 1.5M14.5 8c0 1.657-2.91 3-6.5 3S1.5 9.657 1.5 8m13 0c0-1.657-2.91-3-6.5-3S1.5 6.343 1.5 8M8 14.5A6.5 6.5 0 0 1 1.5 8M8 14.5c1.657 0 3-2.91 3-6.5S9.657 1.5 8 1.5m0 13c-1.657 0-3-2.91-3-6.5s1.343-6.5 3-6.5M1.5 8A6.5 6.5 0 0 1 8 1.5" stroke="currentColor" stroke-width="0.8"></path>
@@ -38,7 +37,7 @@ type MaprayViewer = mapray.Viewer;
 type MaprayVector2 = mapray.Vector2;
 type MaprayVector3 = mapray.Vector3;
 
-export interface MaprayCameraController {
+interface MaprayCameraController {
 	viewer: mapray.Viewer;
 	getCameraAngle(): { pitch: number; roll: number; yaw: number };
 	getCameraPosition(): mapray.GeoPointData;
@@ -68,8 +67,6 @@ export interface MaprayNavigationTooltips {
 	compassRing: string;
 	/** Tooltip for the home button. */
 	home: string;
-	/** @deprecated Currently unused. Compass center click reuses `compassCenter`. */
-	resetNorth: string;
 	/** Tooltip for the zoom-in button. */
 	zoomIn: string;
 	/** Tooltip for the zoom-out button. */
@@ -83,15 +80,7 @@ interface ResolvedMaprayNavigationOptions {
 	tooltips: MaprayNavigationTooltips;
 }
 
-export type MaprayNavigationTarget =
-	| (MaprayViewer & { maprayNavigation?: MaprayNavigation })
-	| (MaprayCameraController & { maprayNavigation?: MaprayNavigation });
-
-type MaprayViewerWithController = MaprayViewerWithNavigation & {
-	[CONTROLLER_PROPERTY]?: MaprayCameraController;
-};
-
-export type MaprayViewerWithNavigation = MaprayViewer & {
+type MaprayViewerWithNavigation = MaprayViewer & {
 	maprayNavigation?: MaprayNavigation;
 };
 
@@ -110,7 +99,6 @@ const DEFAULT_TOOLTIPS: MaprayNavigationTooltips = {
 	compassCenter: 'Drag to orbit. Click to reset north',
 	compassRing: 'Drag outer ring to rotate',
 	home: 'Return to home position',
-	resetNorth: 'Reset north',
 	zoomIn: 'Zoom in',
 	zoomOut: 'Zoom out'
 };
@@ -371,24 +359,15 @@ export interface MaprayNavigation {
 	zoomOut(): void;
 }
 
-export function MaprayNavigation(
-	target: MaprayNavigationTarget,
-	options: MaprayNavigationOptions = {}
-): MaprayNavigation {
-	return createNavigationInstance(target, options);
-}
-
 function createNavigationInstance(
-	target: MaprayNavigationTarget,
+	viewer: MaprayViewerWithNavigation,
 	options: MaprayNavigationOptions = {}
 ): MaprayNavigation {
-	if (!target) {
-		throw new Error('viewer or StandardUIViewer is required');
+	if (!viewer) {
+		throw new Error('viewer is required');
 	}
 
-	const host = target;
-	const controller = resolveCameraController(target);
-	const viewer = controller?.viewer ?? target;
+	const controller = resolveCameraController(viewer);
 	const resolvedOptions: ResolvedMaprayNavigationOptions = {
 		...DEFAULT_OPTIONS,
 		...options,
@@ -457,8 +436,8 @@ function createNavigationInstance(
 			container.style.position = restoreContainerPosition;
 		}
 
-		if (host.maprayNavigation === navigation) {
-			delete host.maprayNavigation;
+		if (viewer.maprayNavigation === navigation) {
+			delete viewer.maprayNavigation;
 		}
 	}
 
@@ -753,12 +732,7 @@ function createNavigationInstance(
 
 		if (controller) {
 			setControllerCameraPositionFromGocs(nextPosition);
-			const angle = controller.getCameraAngle();
-			controller.setCameraAngle({
-				...angle,
-				yaw: normalizeDegrees(angle.yaw + deltaYaw)
-			});
-			updateControllerCamera();
+			setControllerYaw(normalizeDegrees(controller.getCameraAngle().yaw + deltaYaw));
 			return;
 		}
 
@@ -774,12 +748,7 @@ function createNavigationInstance(
 		}
 
 		if (controller) {
-			const angle = controller.getCameraAngle();
-			controller.setCameraAngle({
-				...angle,
-				yaw: normalizeDegrees(angle.yaw + deltaYaw)
-			});
-			updateControllerCamera();
+			setControllerYaw(normalizeDegrees(controller.getCameraAngle().yaw + deltaYaw));
 			return;
 		}
 
@@ -915,9 +884,7 @@ function createNavigationInstance(
 			}
 
 			if (controller) {
-				const angle = controller.getCameraAngle();
-				controller.setCameraAngle({ ...angle, yaw: 0 });
-				updateControllerCamera();
+				setControllerYaw(0);
 			} else {
 				const residualDeltaYaw = normalizeSignedDegrees(-readHeading());
 				applyHeadingDelta(residualDeltaYaw, upAxis);
@@ -1185,16 +1152,27 @@ function createNavigationInstance(
 	function updateControllerCamera(): void {
 		controller?.updateCamera?.();
 	}
+
+	function setControllerYaw(yaw: number): void {
+		if (!controller) {
+			return;
+		}
+
+		const angle = controller.getCameraAngle();
+		controller.setCameraAngle({ ...angle, yaw });
+		updateControllerCamera();
+	}
 }
 
-export function attachMaprayNavigation(
-	viewer: MaprayNavigationTarget,
+export function createMaprayNavigation(
+	viewer: MaprayViewer,
 	options: MaprayNavigationOptions = {}
 ): MaprayNavigation {
-	viewer.maprayNavigation?.destroy();
+	const host = viewer as MaprayViewerWithNavigation;
+	host.maprayNavigation?.destroy();
 
-	const navigation = createNavigationInstance(viewer, options);
-	Object.defineProperty(viewer, 'maprayNavigation', {
+	const navigation = createNavigationInstance(host, options);
+	Object.defineProperty(host, 'maprayNavigation', {
 		configurable: true,
 		value: navigation,
 		writable: true
@@ -1203,49 +1181,17 @@ export function attachMaprayNavigation(
 	return navigation;
 }
 
-export function createMaprayNavigation(
-	viewer: MaprayNavigationTarget,
-	options: MaprayNavigationOptions = {}
-): MaprayNavigation {
-	return attachMaprayNavigation(viewer, options);
+function isCameraController(target: unknown): target is MaprayCameraController {
+	return typeof target === 'object' && target !== null && 'getCameraPosition' in target;
 }
 
-export function viewerMaprayNavigationMixin(
-	viewer: MaprayNavigationTarget,
-	options: MaprayNavigationOptions = {}
-): MaprayNavigation {
-	return attachMaprayNavigation(viewer, options);
-}
-
-export function bindMaprayNavigationController(
-	controller: MaprayCameraController
-): MaprayViewerWithNavigation {
-	const viewer = controller.viewer as MaprayViewerWithController;
-	Object.defineProperty(viewer, CONTROLLER_PROPERTY, {
-		configurable: true,
-		value: controller,
-		writable: true
-	});
-	return viewer;
-}
-
-function isCameraController(target: MaprayNavigationTarget): target is MaprayCameraController {
-	return typeof (target as MaprayCameraController).getCameraPosition === 'function';
-}
-
-function resolveCameraController(
-	target: MaprayNavigationTarget
-): MaprayCameraController | undefined {
-	if (isCameraController(target)) {
-		return target;
-	}
-
-	const renderCallback = target.render_callback;
+function resolveCameraController(viewer: MaprayViewer): MaprayCameraController | undefined {
+	const renderCallback = viewer.render_callback;
 	if (isCameraController(renderCallback)) {
 		return renderCallback;
 	}
 
-	return (target as MaprayViewerWithController)[CONTROLLER_PROPERTY];
+	return undefined;
 }
 
 function clamp(value: number, min: number, max: number): number {

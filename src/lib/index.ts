@@ -1,16 +1,8 @@
-export {
-	attachMaprayNavigation,
-	bindMaprayNavigationController,
-	createMaprayNavigation,
-	MaprayNavigation,
-	viewerMaprayNavigationMixin
-} from './navigation.js';
+export { createMaprayNavigation } from './navigation.js';
 
 export type {
-	MaprayCameraController,
+	MaprayNavigation,
 	MaprayNavigationOptions,
 	MaprayNavigationPosition,
-	MaprayNavigationTooltips,
-	MaprayNavigationTarget,
-	MaprayViewerWithNavigation
+	MaprayNavigationTooltips
 } from './navigation.js';

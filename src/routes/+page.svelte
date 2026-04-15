@@ -1,3 +1,5 @@
-<svelte:head>
-	<title>mapray-navigation</title>
-</svelte:head>
+<script lang="ts">
+	import DebugViewer from '../demo/DebugViewer.svelte';
+</script>
+
+<DebugViewer />
