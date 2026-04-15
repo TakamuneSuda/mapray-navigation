@@ -10,7 +10,17 @@ Navigation UI for `mapray-js`.
 
 It works with plain `HTML + JavaScript`, raw `mapray.Viewer`, and `@mapray/ui` `StandardUIViewer`.
 
+## Demo
+
+- Preview: https://takamunesuda.github.io/mapray-navigation/
+
 ## Install
+
+```bash
+npm install mapray-navigation @mapray/mapray-js
+```
+
+or
 
 ```bash
 pnpm add mapray-navigation @mapray/mapray-js

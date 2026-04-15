@@ -1,11 +1,14 @@
 {
 	"name": "mapray-navigation",
+	"description": "Navigation UI controls for mapray-js viewers.",
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "pnpm build:demo && pnpm build:package",
 		"build:demo": "vite build",
 		"build:package": "svelte-kit sync && svelte-package && publint",
+		"publish:npm": "npm publish --registry=https://registry.npmjs.org/",
+		"publish:npm:dry-run": "npm publish --dry-run --registry=https://registry.npmjs.org/",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"prepack": "pnpm build:package",
@@ -20,6 +23,8 @@
 		"!dist/**/*.spec.*"
 	],
 	"sideEffects": false,
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"exports": {
@@ -29,6 +34,17 @@
 			"default": "./dist/index.js"
 		}
 	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/TakamuneSuda/mapray-navigation.git"
+	},
+	"bugs": {
+		"url": "https://github.com/TakamuneSuda/mapray-navigation/issues"
+	},
+	"homepage": "https://takamunesuda.github.io/mapray-navigation/",
 	"peerDependencies": {
 		"@mapray/mapray-js": "^0.9.6"
 	},
@@ -58,8 +74,12 @@
 	},
 	"keywords": [
 		"mapray",
+		"mapray-js",
 		"navigation",
 		"gis",
-		"3d"
-	]
+		"3d",
+		"viewer",
+		"globe"
+	],
+	"author": "Takamune Suda"
 }
