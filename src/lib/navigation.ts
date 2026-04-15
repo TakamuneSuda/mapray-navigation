@@ -484,7 +484,9 @@ function createNavigationInstance(
 			return;
 		}
 
-		startResetNorthAnimation(normalizeSignedDegrees(-heading));
+		const pivot = getPivotPoint();
+		const upAxis = getPivotAxis(pivot);
+		startResetNorthAnimation(normalizeSignedDegrees(-heading), pivot, upAxis);
 	}
 
 	function rotateLeft(): void {
@@ -536,9 +538,7 @@ function createNavigationInstance(
 		ring.type = 'button';
 		ring.className = 'mapray-navigation__compass-ring';
 		setControlLabel(ring, resolvedOptions.tooltips.compassRing);
-		ring.addEventListener('pointerdown', (event) => {
-			startCompassDrag(event);
-		});
+		ring.addEventListener('pointerdown', startCompassDrag);
 		compassRing = ring;
 
 		const rose = document.createElement('div');
@@ -555,9 +555,7 @@ function createNavigationInstance(
 		setControlLabel(center, resolvedOptions.tooltips.compassCenter);
 		center.innerHTML = COMPASS_CENTER_ICON;
 		compassCenterIcon = center.querySelector('svg') ?? undefined;
-		center.addEventListener('pointerdown', (event) => {
-			startCenterDrag(event);
-		});
+		center.addEventListener('pointerdown', startCenterDrag);
 
 		compass.append(ring, rose, center);
 		return compass;
@@ -565,7 +563,9 @@ function createNavigationInstance(
 
 	function createGroup(className?: string): HTMLDivElement {
 		const element = document.createElement('div');
-		element.className = ['mapray-navigation__group', className].filter(Boolean).join(' ');
+		element.className = className
+			? `mapray-navigation__group ${className}`
+			: 'mapray-navigation__group';
 		return element;
 	}
 
@@ -693,16 +693,6 @@ function createNavigationInstance(
 		return upAxis;
 	}
 
-	function getCameraUpAxis(): MaprayVector3 {
-		const cameraPosition = getCameraPositionGocs();
-		const cameraGeoPoint = new GeoPoint();
-		cameraGeoPoint.setFromGocs(cameraPosition);
-		const localMatrix = cameraGeoPoint.getMlocsToGocsMatrix(GeoMath.createMatrix());
-		const upAxis = GeoMath.createVector3([localMatrix[8], localMatrix[9], localMatrix[10]]);
-		GeoMath.normalize3(upAxis, upAxis);
-		return upAxis;
-	}
-
 	function rotateAroundPivot(deltaYaw: number): void {
 		if (locked) {
 			return;
@@ -738,19 +728,6 @@ function createNavigationInstance(
 		cameraMatrix[12] = nextPosition[0];
 		cameraMatrix[13] = nextPosition[1];
 		cameraMatrix[14] = nextPosition[2];
-	}
-
-	function applyHeadingDelta(deltaYaw: number, upAxis: MaprayVector3): void {
-		if (deltaYaw === 0) {
-			return;
-		}
-
-		if (controller) {
-			setControllerYaw(normalizeDegrees(controller.getCameraAngle().yaw + deltaYaw));
-			return;
-		}
-
-		rotateBasis(viewer.camera.view_to_gocs, upAxis, deltaYaw);
 	}
 
 	function orbitAroundPivot(deltaYaw: number, deltaPitch: number): void {
@@ -843,14 +820,17 @@ function createNavigationInstance(
 		rotationAnimationRafId = requestAnimationFrame(tick);
 	}
 
-	function startResetNorthAnimation(totalDeltaYaw: number): void {
+	function startResetNorthAnimation(
+		totalDeltaYaw: number,
+		pivot: MaprayVector3,
+		upAxis: MaprayVector3
+	): void {
 		if (locked || totalDeltaYaw === 0) {
 			return;
 		}
 
 		cancelRotationAnimation();
 
-		const upAxis = getCameraUpAxis();
 		const durationMs = 220;
 		const startTime = performance.now();
 		let appliedDeltaYaw = 0;
@@ -866,18 +846,16 @@ function createNavigationInstance(
 			const frameDeltaYaw = targetDeltaYaw - appliedDeltaYaw;
 			appliedDeltaYaw = targetDeltaYaw;
 
-			applyHeadingDelta(frameDeltaYaw, upAxis);
+			applyRotationDelta(frameDeltaYaw, pivot, upAxis);
 
 			if (progress < 1) {
 				rotationAnimationRafId = requestAnimationFrame(tick);
 				return;
 			}
 
-			if (controller) {
-				setControllerYaw(0);
-			} else {
-				const residualDeltaYaw = normalizeSignedDegrees(-readHeading());
-				applyHeadingDelta(residualDeltaYaw, upAxis);
+			const residualDeltaYaw = normalizeSignedDegrees(-readHeading());
+			if (residualDeltaYaw !== 0) {
+				applyRotationDelta(residualDeltaYaw, pivot, upAxis);
 			}
 
 			rotationAnimationRafId = undefined;
@@ -939,7 +917,7 @@ function createNavigationInstance(
 			previousAngle = nextAngle;
 
 			if (delta !== 0) {
-				rotateAroundPivot(-delta);
+				rotateAroundPivot(delta);
 			}
 		};
 
@@ -1001,11 +979,11 @@ function createNavigationInstance(
 			const heading = readHeading();
 
 			if (compassRose) {
-				compassRose.style.transform = `rotate(${-heading}deg)`;
+				compassRose.style.transform = `rotate(${heading}deg)`;
 			}
 
 			if (compassCenterIcon) {
-				compassCenterIcon.style.transform = `rotate(${-heading}deg)`;
+				compassCenterIcon.style.transform = `rotate(${heading}deg)`;
 			}
 
 			compassSyncRafId = requestAnimationFrame(tick);
