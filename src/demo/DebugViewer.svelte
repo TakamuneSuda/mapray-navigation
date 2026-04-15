@@ -49,15 +49,15 @@
 			);
 
 			stdViewer.setCameraPosition({
-				longitude: 139.73685,
-				latitude: 35.68,
-				height: 1000
+				longitude: 139.193,
+				latitude: 33,
+				height: 200000
 			});
 
 			stdViewer.setLookAtPosition({
-				longitude: 139.73685,
-				latitude: 35.689777,
-				height: 0
+				longitude: 139.193,
+				latitude: 36.5596,
+				height: 1830
 			});
 
 			stdViewer.setCameraParameter({
